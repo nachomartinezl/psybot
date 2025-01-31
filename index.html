@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychological Consultant Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: auto; }
+        #chatBox { height: 300px; overflow-y: auto; border: 1px solid black; padding: 10px; }
+        .user-message { text-align: right; color: blue; }
+        .bot-message { text-align: left; color: green; }
+    </style>
+    <script>
+        async function sendMessage() {
+            let userInput = document.getElementById("userInput").value;
+            if (!userInput.trim()) return;
+
+            let chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML += `<div class="user-message"><strong>You:</strong> ${userInput}</div>`;
+
+            document.getElementById("userInput").value = "";
+
+            try {
+                let response = await fetch("http://localhost:8000/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userInput })
+                });
+                let data = await response.json();
+
+                chatBox.innerHTML += `<div class="bot-message"><strong>Bot:</strong> ${data.response}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div style="color:red;"><strong>Error:</strong> Unable to contact the server.</div>`;
+            }
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to latest message
+        }
+    </script>
+</head>
+<body>
+    <h1>Psychological Consultant Chat</h1>
+    <div id="chatBox"></div>
+    <input type="text" id="userInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage();">
+    <button onclick="sendMessage()">Send</button>
+</body>
+</html>
