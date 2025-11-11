@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
 
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 # ---------- PATHS ----------
 CHUNKS_DIR = Path("data/chunks")
@@ -16,8 +17,15 @@ STORE_DIR.mkdir(exist_ok=True)
 
 
 # ---------- EMBEDDING MODEL (GPU) ----------
-MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
-model = SentenceTransformer(MODEL_NAME, device="cuda")
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+model = SentenceTransformer(
+    MODEL_NAME,
+    device="cuda"
+)
+
+print("Loaded:", MODEL_NAME)
+print("Embedding dim:", model.get_sentence_embedding_dimension())
+
 EMB_DIM = model.get_sentence_embedding_dimension()
 BATCH_SIZE = 32
 
