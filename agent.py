@@ -1,9 +1,5 @@
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel
-
-# Initialize the OpenAI model
-model = OpenAIModel(model_name='gpt-4o')
 
 # System prompt for the chatbot
 SYSTEM_PROMPT = """
@@ -13,7 +9,7 @@ without providing direct medical advice. Keep responses conversational and empat
 """
 
 # Create an agent
-agent = Agent(model)
+agent = Agent('google-gla:gemini-2.5-pro', system_prompt=SYSTEM_PROMPT)
 
 # Define the input model
 class ChatRequest(BaseModel):

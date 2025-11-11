@@ -2,3 +2,5 @@
 .env
 chat
 psybot
+data
+*.csv

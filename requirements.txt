@@ -1,0 +1,20 @@
+# Core
+numpy
+pandas
+tqdm
+requests
+beautifulsoup4
+lxml
+tiktoken
+
+# Embedding model
+sentence-transformers
+
+# Vector search
+faiss-gpu    # THIS is the correct version for Ubuntu
+
+# Optional: hybrid search
+rank_bm25
+
+# JSON utils
+orjson
