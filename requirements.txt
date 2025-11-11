@@ -6,6 +6,10 @@ requests
 beautifulsoup4
 lxml
 tiktoken
+nltk
+
+# Language detector
+lingua-language-detector
 
 # Embedding model
 sentence-transformers

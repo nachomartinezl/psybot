@@ -4,3 +4,5 @@ chat
 psybot
 data
 *.csv
+__pycache__/
+*.pyc

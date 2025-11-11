@@ -6,6 +6,7 @@ import nltk
 
 # Make sure NLTK has the sentence tokenizer
 nltk.download('punkt')
+nltk.download("punkt_tab")
 
 INPUT_DIR = "data/processed"
 OUTPUT_DIR = "data/chunks"
