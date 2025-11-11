@@ -3,107 +3,85 @@ import json
 from pathlib import Path
 from tqdm import tqdm
 import numpy as np
-
-from sentence_transformers import SentenceTransformer
 import chromadb
-from chromadb.config import Settings
+from sentence_transformers import SentenceTransformer
 
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
-
-# ---------- PATHS ----------
+# ---- PATHS ----
 CHUNKS_DIR = Path("data/chunks")
-STORE_DIR = Path("vector_store")
-STORE_DIR.mkdir(exist_ok=True)
+DB_DIR = "vector_store"
 
-
-# ---------- EMBEDDING MODEL (GPU) ----------
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-model = SentenceTransformer(
-    MODEL_NAME,
-    device="cuda"
-)
-
-print("Loaded:", MODEL_NAME)
-print("Embedding dim:", model.get_sentence_embedding_dimension())
-
-EMB_DIM = model.get_sentence_embedding_dimension()
-BATCH_SIZE = 32
-
-
-# ---------- CHROMA SETUP ----------
-chroma_client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory=str(STORE_DIR)
-))
-
+# ---- CHROMA ----
+chroma_client = chromadb.PersistentClient(path=DB_DIR)
 collection = chroma_client.get_or_create_collection(
-    name="psychoanalytic_books",
+    name="psybot",
     metadata={"hnsw:space": "cosine"}
 )
 
+# ---- MODEL ----
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+model = SentenceTransformer(MODEL_NAME, device="cuda")
+BATCH_SIZE = 32
 
-# ---------- HELPERS ----------
-def embed_batch(texts):
-    """Embed a list of texts on GPU."""
+print("Loaded:", MODEL_NAME)
+
+def embed(texts):
     return model.encode(
         texts,
         batch_size=BATCH_SIZE,
         convert_to_numpy=True,
         normalize_embeddings=True,
         device="cuda"
-    ).astype("float32")
+    ).astype(np.float32)
 
-
-# ---------- MAIN PIPELINE ----------
-def process_chunks():
-
+# ---- MAIN ----
+def process():
     chunk_files = sorted(CHUNKS_DIR.glob("*.jsonl"))
-    print(f"Found {len(chunk_files)} chunk files.")
 
-    for chunk_file in tqdm(chunk_files, desc="Embedding chunks"):
+    doc_id_counter = 0
 
-        batch_texts = []
-        batch_meta = []
-        batch_ids = []
+    for file in tqdm(chunk_files, desc="Embedding chunks"):
 
-        with chunk_file.open("r", encoding="utf-8") as f:
-            for i, line in enumerate(f):
+        with file.open() as f:
+            buffer_texts = []
+            buffer_meta = []
+
+            for line in f:
                 obj = json.loads(line)
                 text = obj["text"].strip()
                 if not text:
                     continue
 
-                batch_texts.append(text)
-                batch_meta.append(obj)
-                batch_ids.append(f"{chunk_file.stem}_{i}")
+                buffer_texts.append(text)
+                buffer_meta.append(obj)
 
-                if len(batch_texts) >= BATCH_SIZE:
-                    vecs = embed_batch(batch_texts)
+                if len(buffer_texts) >= BATCH_SIZE:
+                    vecs = embed(buffer_texts)
+                    ids = [str(doc_id_counter + i) for i in range(len(vecs))]
+                    doc_id_counter += len(vecs)
 
                     collection.add(
-                        embeddings=vecs,
-                        documents=batch_texts,
-                        metadatas=batch_meta,
-                        ids=batch_ids
+                        ids=ids,
+                        embeddings=vecs.tolist(),
+                        metadatas=buffer_meta,
+                        documents=buffer_texts
                     )
 
-                    batch_texts, batch_meta, batch_ids = [], [], []
+                    buffer_texts, buffer_meta = [], []
 
-        # tail batch
-        if batch_texts:
-            vecs = embed_batch(batch_texts)
-            collection.add(
-                embeddings=vecs,
-                documents=batch_texts,
-                metadatas=batch_meta,
-                ids=batch_ids
-            )
+            # tail batch
+            if buffer_texts:
+                vecs = embed(buffer_texts)
+                ids = [str(doc_id_counter + i) for i in range(len(vecs))]
+                doc_id_counter += len(vecs)
 
-        chroma_client.persist()
+                collection.add(
+                    ids=ids,
+                    embeddings=vecs.tolist(),
+                    metadatas=buffer_meta,
+                    documents=buffer_texts
+                )
 
-    print("\n✅ DONE")
-    print(f"→ Stored Chroma collection at: {STORE_DIR}")
-
+    print("✅ DONE — embeddings stored in Chroma DB:", DB_DIR)
 
 if __name__ == "__main__":
-    process_chunks()
+    process()
