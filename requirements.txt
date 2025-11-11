@@ -11,7 +11,7 @@ tiktoken
 sentence-transformers
 
 # Vector search
-faiss-gpu    # THIS is the correct version for Ubuntu
+chromadb     
 
 # Optional: hybrid search
 rank_bm25
